@@ -1,0 +1,2 @@
+DOSSIÉ TÉCNICO — SIFÕES DO LOTE 4
+Dados de projeto: diâmetro interno de 1.200 mm nos sifões de Juazeirinho e Serrote; 1.000 mm nos demais. Extensão total da linha: 18,4 km. Açude de captação com cota máxima de 412 m. O módulo de animação hidráulica do dashboard simula o trajeto açude → canal → sifões. Nós geográficos extraídos do arquivo SISTEMA geral.kmz, renderizados sobre base cartográfica Esri. Duração estimada da rampa completa: 6 horas no cenário 2→9,5 e 4,5 horas no cenário 3→9,5.

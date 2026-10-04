@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Assistente de Documentos · Chatbot embutido</title>
+<style>
+:root{
+  --bg:#f4f6f8; --card:#ffffff; --ink:#1a2733; --muted:#5b6b7a;
+  --brand:#1565c0; --brand-ink:#0d47a1; --ok:#1b5e20; --line:#d7dee6; --chip:#e8f0fe;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--ink)}
+.wrap{max-width:880px;margin:0 auto;padding:24px 16px 48px}
+h1{font-size:1.5rem;margin:0 0 4px}
+.sub{color:var(--muted);font-size:.92rem;margin:0 0 20px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:16px}
+#log{height:380px;overflow-y:auto;display:flex;flex-direction:column;gap:10px}
+.msg{padding:10px 14px;border-radius:10px;max-width:88%;white-space:pre-wrap;font-size:.94rem;line-height:1.45}
+.msg.user{align-self:flex-end;background:var(--brand);color:#fff}
+.msg.bot{align-self:flex-start;background:#eef4fb;border:1px solid var(--line)}
+.msg.bot.err{background:#fdecea;border-color:#f5c6c0;color:#8e2020}
+.src{margin-top:6px;font-size:.78rem;color:var(--muted)}
+.src b{color:var(--brand-ink)}
+.bar{display:flex;gap:8px;margin-top:12px}
+.bar input{flex:1;padding:11px 14px;border:1px solid var(--line);border-radius:8px;font-size:.95rem}
+.bar button{padding:11px 20px;border:0;border-radius:8px;background:var(--brand);color:#fff;font-size:.95rem;cursor:pointer}
+.bar button:disabled{opacity:.5;cursor:default}
+details{margin-top:12px;font-size:.85rem;color:var(--muted)}
+details input{width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:6px;margin:4px 0 10px;font-size:.85rem}
+.pill{display:inline-block;background:var(--chip);color:var(--brand-ink);border-radius:99px;padding:2px 10px;font-size:.75rem;margin:2px 4px 2px 0}
+.status{font-size:.8rem;color:var(--muted);margin-top:8px}
+footer{color:var(--muted);font-size:.78rem;text-align:center;margin-top:24px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Assistente de Documentos</h1>
+  <p class="sub">Chatbot embutido que responde <b>apenas</b> com base nos arquivos indexados em <code>knowledge.json</code>, citando o arquivo de origem.</p>
+
+  <div id="files" class="card"><span class="status">Carregando base de conhecimento…</span></div>
+
+  <div class="card">
+    <div id="log"></div>
+    <div class="bar">
+      <input id="q" placeholder="Pergunte algo sobre o conteúdo dos documentos…" autocomplete="off">
+      <button id="send">Enviar</button>
+    </div>
+    <div class="status" id="mode-status"></div>
+    <details>
+      <summary>Conexão com LLM (opcional — modo local funciona sem isso)</summary>
+      <label>Endpoint OpenAI-compatível (ex.: proxy Worker — nunca com chave no código):<br>
+        <input id="endpoint" placeholder="https://seu-worker.example.workers.dev"></label>
+      <label>Token (fica só no localStorage deste navegador):<br>
+        <input id="token" type="password" placeholder="deixe vazio se o proxy já injeta a chave"></label>
+      <button id="save" class="pill">Salvar conexão</button>
+    </details>
+  </div>
+
+  <footer>100% estático · recuperação local com citação de fonte · sem build, sem dependências externas</footer>
+</div>
+
+<script>
+window.KB_INLINE = [{"name": "dossie_tecnico.txt", "chunks": ["DOSSIÉ TÉCNICO — SIFÕES DO LOTE 4\nDados de projeto: diâmetro interno de 1.200 mm nos sifões de Juazeirinho e Serrote; 1.000 mm nos demais. Extensão total da linha: 18,4 km. Açude de captação com cota máxima de 412 m. O módulo de animação hidráulica do dashboard simula o trajeto açude → canal → sifões. Nós geográficos extraídos do arquivo SISTEMA geral.kmz, renderizados sobre base cartográfica Esri. Duração estimada da rampa completa: 6 horas no cenário 2→9,5 e 4,5 horas no cenário 3→9,5."]}, {"name": "manual_operacional.txt", "chunks": ["Manual Operacional do Sistema de Transposição — Lote 4\nO sistema de transferência de água do Lote 4 opera com seis sifões em sequência: Juazeirinho, Serrote, Pirangi, Melancias, Mão Ruiva e Boa Vista. A rampa de vazão prevê dois cenários: elevação de 2 para 9,5 m³/s e de 3 para 9,5 m³/s. Antes da rampa, os seis sifões devem ser preparados individualmente: inspeção visual, teste de vedação, verificação de válvulas e registro de leitura inicial. A abertura é sempre sequencial, nunca simultânea. A pressão máxima admissível em cada sifão é de 40 m.c.a. Em caso de oscilação superior a 5% entre leituras consecutivas, interromper a rampa e acionar a supervisão."]}, {"name": "protocolo.md", "chunks": ["# Protocolo Operacional Revisado\n\n## Preparação dos 6 sifões antes da rampa\nCada sifão (Juazeirinho, Serrote, Pirangi, Melancias, Mão Ruiva, Boa Vista) exige checklist próprio antes da elevação de vazão: 1) deságue livre; 2) purga de ar; 3) confirmação de sensores ativos; 4) registro fotográfico.\n\n## Rampa de vazão\nA elevação deve ser escalonada em degraus de 0,5 m³/s, com estabilização de 15 minutos em cada degrau. Vazão-alvo: 9,5 m³/s. O cenário iniciando em 3 m³/s exige monitoramento dobrado de vibração nas bombas.\n\n## Critérios de parada\nParar imediatamente se: pressão exceder 40 m.c.a.; turbidez subir 20%; qualquer sifão apresentar vazamento visível."]}];
+(function(){
+"use strict";
+/* ==================== ESTADO ==================== */
+const KB = [];            // [{name, chunks:[...]}]
+const history = [];       // [{role, content}]
+const STOP = new Set("a o os as de do da dos das e em no na nos nas um uma uns umas para por com sem sobre que se ao aos à às é ser são foi pelo pela como mais menos muito pouco qual quais quando onde como entre até após antes durante este esta isso aquilo sua seu suas seus minha meu não sim tem têm ter há".split(" "));
+
+/* ==================== UI ==================== */
+const $ = id => document.getElementById(id);
+const log = $("log"), input = $("q"), btn = $("send");
+
+function addMsg(cls, text, sources){
+  const d = document.createElement("div");
+  d.className = "msg " + cls;
+  d.textContent = text;
+  if (sources && sources.length){
+    const s = document.createElement("div");
+    s.className = "src";
+    s.innerHTML = "📄 Fontes: " + sources.map(f=>"<b>"+esc(f)+"</b>").join(", ");
+    d.appendChild(s);
+  }
+  log.appendChild(d);
+  log.scrollTop = log.scrollHeight;
+  return d;
+}
+const esc = t => t.replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+/* ==================== BUSCA LOCAL (keyword scoring) ==================== */
+function tokens(t){
+  return t.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"")
+          .replace(/[^a-z0-9\s]/g," ").split(/\s+/)
+          .filter(w => w.length > 2 && !STOP.has(w));
+}
+function retrieve(query, topN){
+  const qt = tokens(query);
+  if (!qt.length) return [];
+  const scored = [];
+  KB.forEach(doc => doc.chunks.forEach((chunk, idx) => {
+    const ct = tokens(chunk);
+    if (!ct.length) return;
+    let score = 0;
+    qt.forEach(w => { score += ct.filter(c => c === w).length * 2
+                              + (ct.some(c => c.startsWith(w) || w.startsWith(c)) ? 1 : 0); });
+    if (score > 0) scored.push({ score, file: doc.name, chunk, idx });
+  }));
+  scored.sort((a,b) => b.score - a.score);
+  return scored.slice(0, topN || 3);
+}
+
+function answerLocal(query){
+  const hits = retrieve(query);
+  if (!hits.length){
+    addMsg("bot", "Não encontrei nada sobre isso nos documentos indexados. Tente reformular com termos que apareçam nos arquivos.");
+    return;
+  }
+  const files = [...new Set(hits.map(h => h.file))];
+  const body = hits.map(h => "— " + h.chunk).join("\n\n");
+  addMsg("bot", "Trechos mais relevantes que encontrei:\n\n" + body, files);
+}
+
+/* ==================== MODO LLM (opcional, via proxy) ==================== */
+async function answerLLM(query){
+  const endpoint = ($("endpoint").value || "").replace(/\/+$/,"");
+  const token = $("token").value.trim();
+  if (!endpoint){ addMsg("bot","Configure o endpoint na seção de conexão, ou use o modo local."); return; }
+  const hits = retrieve(query, 5);
+  const context = hits.map(h => "[" + h.file + "]\n" + h.chunk).join("\n\n---\n\n");
+  const sys = "Você é um assistente que responde EXCLUSIVAMENTE com base nos trechos de documentos abaixo. " +
+    "Cite o nome do arquivo entre colchetes ao usar cada informação. Se a resposta não estiver nos trechos, diga que não há informação nos documentos. Responda em pt-BR.\n\n" +
+    "TRECHOS DOS DOCUMENTOS:\n" + (context || "(nenhum trecho recuperado)");
+  history.push({role:"user", content:query});
+  const typing = addMsg("bot","⏳ consultando o modelo…");
+  try{
+    const headers = {"Content-Type":"application/json"};
+    if (token) headers["Authorization"] = "Bearer " + token;
+    const r = await fetch(endpoint + "/v1/chat/completions", {
+      method:"POST", headers,
+      body: JSON.stringify({ model:"hermes-agent", messages:[{role:"system",content:sys}, ...history] })
+    });
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    const data = await r.json();
+    const ans = data.choices?.[0]?.message?.content || "(resposta vazia)";
+    history.push({role:"assistant", content:ans});
+    typing.remove();
+    addMsg("bot", ans, [...new Set(hits.map(h=>h.file))]);
+  }catch(e){
+    typing.remove();
+    addMsg("bot err", "Falha na chamada ao LLM: " + e.message + "\nVerifique: gateway rodando, túnel HTTPS ativo e CORS no proxy. O modo local continua funcionando.");
+    history.pop();
+  }
+}
+
+/* ==================== EVENTOS ==================== */
+function send(){
+  const q = input.value.trim();
+  if (!q) return;
+  addMsg("user", q);
+  input.value = "";
+  btn.disabled = true;
+  const useLLM = ($("endpoint").value || "").trim() !== "";
+  const done = () => { btn.disabled = false; input.focus(); };
+  if (useLLM) { answerLLM(q).finally(done); } else { setTimeout(()=>{ answerLocal(q); done(); }, 60); }
+}
+btn.addEventListener("click", send);
+input.addEventListener("keydown", e => { if (e.key === "Enter") send(); });
+$("save").addEventListener("click", () => {
+  localStorage.setItem("kb-endpoint", $("endpoint").value);
+  localStorage.setItem("kb-token", $("token").value);
+  updateMode();
+});
+function updateMode(){
+  const has = ($("endpoint").value || "").trim() !== "";
+  $("mode-status").innerHTML = has
+    ? '🤖 <b>Modo LLM</b>: as respostas são redigidas pelo modelo com os trechos como contexto.'
+    : '📚 <b>Modo local</b>: respostas = trechos dos documentos com citação da fonte. Sem servidor, sem chave.';
+}
+const se = localStorage.getItem("kb-endpoint"), st = localStorage.getItem("kb-token");
+if (se) $("endpoint").value = se;
+if (st) $("token").value = st;
+updateMode();
+
+/* ==================== CARREGA knowledge.json ==================== */
+// Modo single-file: se houver window.KB_INLINE definido, usa direto (sem fetch)
+const boot = window.KB_INLINE
+  ? Promise.resolve(window.KB_INLINE)
+  : fetch("knowledge.json").then(r => { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); });
+boot
+  .then(data => {
+    data.forEach(d => KB.push(d));
+    const total = KB.reduce((s,d)=>s+d.chunks.length,0);
+    $("files").innerHTML =
+      '<b>Base carregada:</b> ' + KB.length + ' arquivo(s), ' + total + ' trechos.<br>' +
+      KB.map(d=>'<span class="pill">'+esc(d.name)+' · '+d.chunks.length+'</span>').join("");
+    addMsg("bot","Olá! Sou o assistente desta base de documentos. Pergunte sobre o conteúdo dos arquivos listados acima — respondo citando a fonte.");
+  })
+  .catch(e => {
+    $("files").innerHTML = '<span style="color:#8e2020">⚠️ knowledge.json não encontrado (' + esc(e.message) +
+      '). Gere com <code>python3 build_knowledge.py</code> após colocar seus arquivos em <code>docs/</code>.</span>';
+  });
+})();
+</script>
+</body>
+</html>
